@@ -28,7 +28,7 @@ In a terminal, enter:
 
 ```
 git clone https://github.com/cagmz/digit_classification.git
-cd digit_classification
+cd digit_classification/
 pip3 install -r requirements.txt
 python3 classify.py
 ```
