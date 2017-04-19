@@ -33,7 +33,7 @@ def visualize_data(digits):
 # http://scikit-learn.org/stable/modules/generated/sklearn.neighbors.KNeighborsClassifier.html
 @timed
 def demo_knn(train_x, test_x, train_y, test_y, results):
-    knn = neighbors.KNeighborsClassifier()
+    knn = neighbors.KNeighborsClassifier(n_neighbors=3, n_jobs=-1)
     knn.fit(train_x, train_y)
 
     expected = test_y
@@ -51,7 +51,7 @@ def demo_svm(train_x, test_x, train_y, test_y, results):
     svm_classifier = svm.SVC(gamma=0.0001)
 
     # To apply a classifier on this data, the image must be flattened
-    # and turned into in a (samples, feature) matrix:
+    # and turned into in a (samples, feature) matrix
     train_x = train_x.reshape(len(train_x), -1)
 
     svm_classifier.fit(train_x, train_y)
@@ -67,9 +67,10 @@ def demo_svm(train_x, test_x, train_y, test_y, results):
 @timed
 def demo_mlp(train_x, test_x, train_y, test_y, results):
     mlp = MLPClassifier(hidden_layer_sizes=(100, 100),
-                        max_iter=400, alpha=1e-4,
-                        solver='sgd',
-                        verbose=False,     # verbose=10
+                        max_iter=400,
+                        alpha=1e-4,
+                        solver='lbfgs',     # works well for small datasets
+                        verbose=False,
                         tol=1e-4,
                         random_state=1)
 
@@ -100,7 +101,7 @@ def main():
     try:
         digits = datasets.load_digits()
         print("Training classifiers on {} handwritten digit samples.".format(len(digits.data)))
-        
+
         demos = [demo_knn, demo_svm, demo_mlp]
 
         selection = 0
@@ -132,5 +133,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-
 
