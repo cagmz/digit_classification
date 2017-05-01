@@ -224,12 +224,15 @@ def plot_average_time_elapsed(results):
 
     classifiers = list(results.keys())
     avg_time_elapsed = [results[c]["avg_time_elapsed"] for c in classifiers]
+    iterations = len(results[classifiers[0]]["performance_data"])
 
     sorted_times = sort_performance(results, "avg_time_elapsed")
     classifiers, avg_time_elapsed = plottable_performance(sorted_times)
 
     fig, ax = plt.subplots()
-    ax.set_title("Average Time Elapsed Learning the Digits Data set")
+    ax.set_title("Average Time Elapsed learning the Digits Data set over {} iterations"
+                 .format(iterations))
+
     ax.set_ylabel("Average Time Elapsed (seconds)")
 
     y_position = range(len(classifiers))
@@ -245,9 +248,12 @@ def plot_average_score(results):
 
     sorted_scores = sort_performance(results, "avg_score")
     classifiers, avg_scores = plottable_performance(sorted_scores)
+    iterations = len(results[classifiers[0]]["performance_data"])
 
     fig, ax = plt.subplots()
-    ax.set_title("Average Classifer Score on Digits Data set")
+    ax.set_title("Average Classifer Score on Digits Data set over {} iterations"
+                 .format(iterations))
+
     ax.set_ylabel("Average Score")
 
     y_position = range(len(classifiers))
