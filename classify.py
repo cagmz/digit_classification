@@ -41,8 +41,9 @@ def visualize_data():
 # Classify with KNN
 # http://scikit-learn.org/stable/modules/generated/sklearn.neighbors.KNeighborsClassifier.html
 @timed
-def demo_knn(train_x, test_x, train_y, test_y, knn=None):
+def demo_knn(train_x, test_x, train_y, test_y, classifier=None):
 
+    knn = classifier
     if knn is None:
         knn = neighbors.KNeighborsClassifier(n_neighbors=3, n_jobs=-1)
 
@@ -53,12 +54,27 @@ def demo_knn(train_x, test_x, train_y, test_y, knn=None):
 
     return metrics.accuracy_score(expected, predicted)
 
+def tune_knn():
+
+    results = {}
+
+    for k in range(1, 10):
+        knn = neighbors.KNeighborsClassifier(n_neighbors=k, n_jobs=-1)
+        performance_data = run_classifier(20, demo_knn,
+                                          test_size=0.10, classifier=knn)
+        save_performance_data(results, str(k) + "nn", performance_data)
+
+    print_averages(results)
+    plot_performance(results)
+
+
 ###############################################################################
 # Classify with a Support Vector Machine
 # http://scikit-learn.org/stable/modules/generated/sklearn.svm.SVC.html
 @timed
-def demo_svm(train_x, test_x, train_y, test_y, svm_classifier=None):
+def demo_svm(train_x, test_x, train_y, test_y, classifier=None):
 
+    svm_classifier = classifier
     if svm_classifier is None:
         svm_classifier = svm.SVC(gamma=0.0001)
 
@@ -76,8 +92,9 @@ def demo_svm(train_x, test_x, train_y, test_y, svm_classifier=None):
 # Classify with Multi-layer Perceptron
 # http://scikit-learn.org/stable/modules/generated/sklearn.neural_network.MLPClassifier.html
 @timed
-def demo_mlp(train_x, test_x, train_y, test_y, mlp=None):
+def demo_mlp(train_x, test_x, train_y, test_y, classifier=None):
 
+    mlp = classifier
     if mlp is None:
         mlp = MLPClassifier(hidden_layer_sizes=(100, 100),
                             max_iter=400,
@@ -92,6 +109,29 @@ def demo_mlp(train_x, test_x, train_y, test_y, mlp=None):
     predicted = mlp.predict(test_x)
 
     return metrics.accuracy_score(expected, predicted)
+
+def tune_mlp():
+
+    results = {}
+
+    for n in range(100, 1001, 100):
+        print("Working on MLP with {} hidden layers".format(n))
+        mlp = MLPClassifier(hidden_layer_sizes=(n, n),
+                            max_iter=400,
+                            alpha=1e-4,
+                            solver='lbfgs',     # works well for small datasets
+                            verbose=False,
+                            tol=1e-4,
+                            random_state=1)
+
+        performance_data = run_classifier(10, demo_mlp,
+                                          test_size=0.10,
+                                          classifier=mlp)
+
+        save_performance_data(results, str(n) + "_mlp", performance_data)
+
+    print_averages(results)
+    plot_performance(results)
 
 def menu_selection():
 
@@ -128,17 +168,17 @@ def num_iterations():
 
     return iterations
 
-def run_classifier(iterations, func, dataset, test_size=0.10):
+def run_classifier(iterations, func, test_size=0.10, classifier=None):
 
     performance_data = []
 
     for i in range(iterations):
         # Split data set into training and test sets
-        train_x, test_x, train_y, test_y = train_test_split(dataset.data,
-                                                            dataset.target,
+        train_x, test_x, train_y, test_y = train_test_split(digits.data,
+                                                            digits.target,
                                                             test_size=test_size)
 
-        accuracy, time_elapsed = func(train_x, test_x, train_y, test_y)
+        accuracy, time_elapsed = func(train_x, test_x, train_y, test_y, classifier)
         performance_data.append(PerformanceData(accuracy, time_elapsed))
 
     return performance_data
@@ -227,6 +267,15 @@ def gather_demos(selection):
 
     return demos
 
+
+def save_performance_data(results, classifier, performance_data):
+
+    avg_score, avg_time_elapsed = compute_averages(performance_data)
+    results[classifier] = {"avg_score": avg_score,
+                            "avg_time_elapsed": avg_time_elapsed,
+                            "performance_data": performance_data}
+
+
 def gather_results(demos, iterations):
 
     results = {}
@@ -234,26 +283,25 @@ def gather_results(demos, iterations):
     for unit in demos:
         classifier, fn = unit
         performance_data = run_classifier(iterations, fn, digits, test_size=0.10)
-        avg_score, avg_time_elapsed = compute_averages(performance_data)
-        results[classifier] = {"avg_score": avg_score,
-                               "avg_time_elapsed": avg_time_elapsed,
-                               "performance_data": performance_data}
-
+        save_performance_data(results, classifier, performance_data)
     return results
+
+def plot_performance(results):
+    plot_average_score(results)
+    plot_average_time_elapsed(results)
 
 def run_tests(selection):
 
     iterations = num_iterations()
 
-    print("Training classifiers on {} handwritten digit samples \
-          for {} iterations.\n".format(len(digits.data), iterations))
+    print("Training classifiers on {} digit samples for {} iterations.\n"
+          .format(len(digits.data), iterations))
 
     demos = gather_demos(selection)
     results = gather_results(demos, iterations)
 
     print_averages(results)
-    plot_average_score(results)
-    plot_average_time_elapsed(results)
+    plot_performance(results)
 
 def main():
 
@@ -267,6 +315,10 @@ def main():
                 run_tests(selection)
             elif selection == 5:
                 visualize_data()
+            elif selection == 7:
+                tune_knn()
+            elif selection == 8:
+                tune_mlp()
     except KeyboardInterrupt:
         pass
 
