@@ -2,6 +2,7 @@
 from functools import wraps
 from time import time
 from collections import namedtuple
+from operator import itemgetter
 
 from sklearn import datasets, metrics, neighbors, svm
 from sklearn.neural_network import MLPClassifier
@@ -27,6 +28,7 @@ def timed(f):
     return wrapper
 
 def visualize_data():
+
     images_and_labels = list(zip(digits.images, digits.target))
 
     for index, (image, label) in enumerate(images_and_labels[:10]):
@@ -60,8 +62,7 @@ def tune_knn():
 
     for k in range(1, 10):
         knn = neighbors.KNeighborsClassifier(n_neighbors=k, n_jobs=-1)
-        performance_data = run_classifier(20, demo_knn,
-                                          test_size=0.10, classifier=knn)
+        performance_data = run_classifier(20, demo_knn, classifier=knn)
         save_performance_data(results, str(k) + "nn", performance_data)
 
     print_averages(results)
@@ -124,49 +125,44 @@ def tune_mlp():
                             tol=1e-4,
                             random_state=1)
 
-        performance_data = run_classifier(10, demo_mlp,
-                                          test_size=0.10,
-                                          classifier=mlp)
+        performance_data = run_classifier(10, demo_mlp, classifier=mlp)
 
         save_performance_data(results, str(n) + "_mlp", performance_data)
 
     print_averages(results)
     plot_performance(results)
 
+def get_option(options, default=6):
+
+    if len(options) > 1:
+        for i, o in enumerate(options):
+            print("{}) {}".format(i + 1, o))
+    else:
+        print("{}".format(options[0]))
+
+    try:
+        option = int(input("\n> "))
+    except ValueError:
+        option = default
+
+    print()
+
+    return option
+
 def menu_selection():
 
-    selection = 6
-    try:
-        selection = int(input("""
-                Please make a selection:
-                1) Demo K-nearest neighbor (KNN)
-                2) Demo Support vector machine (SVM)
-                3) Demo Multi-layer perceptron (MLP)
-                4) Demo All
-                5) Plot dataset sample
-                6) Quit\n
-                > """))
-    except ValueError:
-        pass
+    options = ["Demo K-nearest neighbor (KNN)",
+               "Demo Support vector machine (SVM)",
+               "Demo Multi-layer perceptron (MLP)",
+               "Demo All",
+               "Plot dataset sample",
+               "Quit"
+               ]
 
-    print()
-
-    return selection
+    return get_option(options, default=6)
 
 def num_iterations():
-
-    iterations = 1
-
-    try:
-        iterations = int(input("""
-                Please enter the number of iterations:
-                > """))
-    except ValueError:
-        pass
-
-    print()
-
-    return iterations
+   return get_option(["Please enter the number of iterations:"], default=1)
 
 def run_classifier(iterations, func, test_size=0.10, classifier=None):
 
@@ -214,10 +210,23 @@ def autolabel(ax, bars):
                 round(height, 2), ha='center', va='bottom')
 
 
+def sort_performance(results, metric="avg_score"):
+    classifiers = list(results.keys())
+    metrics = [results[c][metric] for c in classifiers]
+    merged = list(zip(classifiers, metrics))
+    merged.sort(key=itemgetter(1))
+    return merged
+
+def plottable_performance(sorted_metrics):
+    return [classifier for classifier, _ in sorted_metrics], [metric for _, metric in sorted_metrics]
+
 def plot_average_time_elapsed(results):
 
     classifiers = list(results.keys())
     avg_time_elapsed = [results[c]["avg_time_elapsed"] for c in classifiers]
+
+    sorted_times = sort_performance(results, "avg_time_elapsed")
+    classifiers, avg_time_elapsed = plottable_performance(sorted_times)
 
     fig, ax = plt.subplots()
     ax.set_title("Average Time Elapsed Learning the Digits Data set")
@@ -234,15 +243,15 @@ def plot_average_time_elapsed(results):
 
 def plot_average_score(results):
 
-    classifiers = list(results.keys())
-    avg_score = [results[c]["avg_score"] for c in classifiers]
+    sorted_scores = sort_performance(results, "avg_score")
+    classifiers, avg_scores = plottable_performance(sorted_scores)
 
     fig, ax = plt.subplots()
     ax.set_title("Average Classifer Score on Digits Data set")
     ax.set_ylabel("Average Score")
 
     y_position = range(len(classifiers))
-    classifier_bars = ax.bar(y_position, avg_score, align="center")
+    classifier_bars = ax.bar(y_position, avg_scores, align="center")
 
     ax.set_xticks(y_position)
     ax.set_xticklabels(classifiers)
@@ -282,7 +291,7 @@ def gather_results(demos, iterations):
 
     for unit in demos:
         classifier, fn = unit
-        performance_data = run_classifier(iterations, fn, digits, test_size=0.10)
+        performance_data = run_classifier(iterations, fn)
         save_performance_data(results, classifier, performance_data)
     return results
 
@@ -294,8 +303,8 @@ def run_tests(selection):
 
     iterations = num_iterations()
 
-    print("Training classifiers on {} digit samples for {} iterations.\n"
-          .format(len(digits.data), iterations))
+    print("Computing average performance over {} iterations.\n"
+          .format(iterations))
 
     demos = gather_demos(selection)
     results = gather_results(demos, iterations)
@@ -304,6 +313,9 @@ def run_tests(selection):
     plot_performance(results)
 
 def main():
+
+    print("Training classifiers on {} digit samples.\n"
+          .format(len(digits.data)))
 
     try:
 
