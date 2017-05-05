@@ -207,7 +207,7 @@ def autolabel(ax, bars):
     for bar in bars:
         height = bar.get_height()
         ax.text(bar.get_x() + bar.get_width() / 2., height,
-                round(height, 2), ha='center', va='bottom')
+                round(height, 6), ha='center', va='bottom')
 
 
 def sort_performance(results, metric="avg_score"):
